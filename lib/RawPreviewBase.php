@@ -113,6 +113,9 @@ class RawPreviewBase
         $previewImageTmpPath = sys_get_temp_dir() . '/' . md5($localPath . uniqid()) . '.' . $tagData['ext'];
 
 
+        if ($previewTag === 'SourceGPR') {
+            shell_exec("gpr_tools -i " . escapeshellarg($localPath) . ' -r 4:1 -o ' . escapeshellarg($previewImageTmpPath));
+        } else {
         if ($previewTag === 'SourceTIFF') {
             // load the original file as fallback when TIFF has no preview embedded
             $previewImageTmpPath = $localPath;
@@ -127,6 +130,7 @@ class RawPreviewBase
 
             //update previewImageTmpPath with orientation data
             shell_exec($this->getConverter() . ' -TagsFromFile ' . escapeshellarg($localPath) . ' -orientation -overwrite_original ' . escapeshellarg($previewImageTmpPath));
+        }
         }
 
         Image::configure(['driver' => $this->getDriver()]);
@@ -153,6 +157,11 @@ class RawPreviewBase
         // get all available previews and the file type
         $previewData = json_decode($json, true);
         $fileType = $previewData[0]['FileType'] ?? 'n/a';
+
+        // we know how to hande GPR files directly
+        if ($fileType === 'GPR') {
+            return ['tag' => 'SourceGPR', 'ext' => 'jpg'];
+        }
 
         // potential tags in priority
         $tagsToCheck = [
@@ -181,6 +190,7 @@ class RawPreviewBase
         if ($fileType === 'TIFF' && $this->isTiffCompatible()) {
             return ['tag' => 'SourceTIFF', 'ext' => 'tiff'];
         }
+
 
         // extra logic for tiff previews
         $tiffTag = null;
